@@ -1,0 +1,110 @@
+﻿@page "/"
+
+<div class="container">    
+    <div class="mb-5">
+        <DxMemo @bind-Text=@InputFormText
+                CssClass="w-50"
+                Rows="10"
+                ResizeMode="MemoResizeMode"
+                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"/>
+        
+        <DxButton Text="Формировать переменные"
+                  CssClass="mt-5"
+                  Click="(() => ProcessingText(InputFormText))" />
+    </div>
+               
+    <div>
+        <DxMemo Text=@ExportFormText.ToString()
+                CssClass="w-50"
+                Rows="10"
+                ResizeMode="MemoResizeMode"/>
+    </div>
+</div>
+
+@code
+{
+    public string InputFormText { get; set; } = string.Empty;
+    public StringBuilder ExportFormText { get; set; } = new();
+    MemoResizeMode MemoResizeMode { get; set; } = MemoResizeMode.VerticalAndHorizontal;
+
+    List<string> ListTypesValues = new List<string>(){"INT", "SINT", "DINT", "ULINT", 
+                                                "UINT", "USINT", "UDINT", "ULINT", "REAL", "LREAL", 
+                                                "BOOL", "BYTE", "WORD", "DWORD", "LWORD", "DATE", 
+                                                "TIME_OF_DAY", "DATE_AND_TIME", "TIME", "STRING"};
+
+    private Dictionary<string, string> ExportDictionary = new();
+
+
+    private StringBuilder ProcessingText(string InputText)  //метод обработки полученного текста
+    {
+        ExportDictionary.Clear();
+        if(InputText is not null)
+        {
+            string[]? ArrayStrings = InputText.Split(';');
+            if (ArrayStrings != null && ArrayStrings.Length > 0)
+            {
+                foreach (var currentString in ArrayStrings)
+                {
+                    foreach (var type in ListTypesValues)
+                    {
+                        if (currentString.Contains(type) && !currentString.Contains(" AT %"))
+                        {
+                            try
+                            {
+                                int indexEndPer = currentString.IndexOf(type) - 3;                         //индекс последнего символа названия переменной;
+
+                                int indexStartPer = currentString.LastIndexOf(' ', indexEndPer - 1) + 1;   //индекс начального символа названия переменной;
+
+                                string peremenName = currentString.Substring(indexStartPer, indexEndPer - indexStartPer);   //получаем название переменной;
+
+                                if (!ExportDictionary.ContainsKey(peremenName))
+                                    ExportDictionary.Add(peremenName, type);
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine($"Ошибка получения переменной в строке: {currentString}\n" + 
+                                                  $"Текст ошибки:{e.Message};");
+                            }
+
+                        }
+                        else if (currentString.Contains(type))
+                        {
+                            try
+                            {
+                                int indexEndPer = currentString.IndexOf(" AT %");                           //индекс последнего символа названия переменной;
+
+                                int indexStartPer = currentString.LastIndexOf(' ', indexEndPer - 1) + 1;    //индекс начального символа названия переменной;
+
+                                string peremenName = currentString.Substring(indexStartPer, indexEndPer - indexStartPer);    //получаем название переменной;
+
+                                if (!ExportDictionary.ContainsKey(peremenName))
+                                    ExportDictionary.Add(peremenName, type);
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine($"Ошибка получения переменной в строке: {currentString}\n" +
+                                                  $"Текст ошибки:{e.Message};");
+                            }
+                        }
+                    }
+                }
+            }
+
+            ArrayStrings = null;
+        }
+        return ConvertDictionaryToString(ExportDictionary);
+    }
+
+    private StringBuilder ConvertDictionaryToString(Dictionary<string, string> dictionary)  //метод преобразования словаря 
+    {                                                                                      // в текстовый формат для отображения пользователю    
+        ExportFormText.Clear();
+        if(dictionary?.Count > 0)
+        {
+            foreach (var str in dictionary)
+            {
+                ExportFormText.AppendLine($"{str.Key} : {str.Value}");
+            }
+        }
+        return ExportFormText.Length > 0 ? ExportFormText : ExportFormText.Append("Переменные не найдены");
+    }
+}
